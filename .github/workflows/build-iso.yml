@@ -60,6 +60,7 @@ jobs:
       - name: Split ISO for release-safe downloads
         run: |
           set -euxo pipefail
+          sudo chown -R "$USER:$USER" dist
           mkdir -p dist/split
           split -b 1900M -d -a 2 dist/astramind-kubuntu-26.04-amd64.iso dist/split/astramind-kubuntu-26.04-amd64.iso.part-
           (cd dist && sha256sum astramind-kubuntu-26.04-amd64.iso split/* > SHA256SUMS)
