@@ -1,0 +1,79 @@
+name: Build AstraMind Kubuntu ISO
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-iso.yml"
+      - "source.tar.gz.b64"
+
+jobs:
+  build:
+    name: Build customized Kubuntu ISO
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unpack source bundle
+        run: |
+          set -euxo pipefail
+          base64 -d source.tar.gz.b64 > source.tar.gz
+          tar -xzf source.tar.gz
+          rm -f source.tar.gz
+
+      - name: Free disk space
+        run: |
+          set -euxo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+          df -h
+
+      - name: Install build dependencies
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            ca-certificates \
+            curl \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            isolinux \
+            mtools \
+            rsync \
+            squashfs-tools \
+            xorriso
+
+      - name: Static validation
+        run: |
+          set -euxo pipefail
+          bash scripts/validate.sh
+
+      - name: Build ISO
+        env:
+          ASTRA_ASSUME_YES: "1"
+        run: |
+          set -euxo pipefail
+          sudo --preserve-env=ASTRA_ASSUME_YES bash iso/build-iso.sh
+
+      - name: Split ISO for release-safe downloads
+        run: |
+          set -euxo pipefail
+          mkdir -p dist/split
+          split -b 1900M -d -a 2 dist/astramind-kubuntu-26.04-amd64.iso dist/split/astramind-kubuntu-26.04-amd64.iso.part-
+          (cd dist && sha256sum astramind-kubuntu-26.04-amd64.iso split/* > SHA256SUMS)
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: astramind-kubuntu-iso
+          path: |
+            dist/astramind-kubuntu-26.04-amd64.iso
+            dist/astramind-kubuntu-26.04-amd64.iso.sha256
+            dist/SHA256SUMS
+            dist/split/*
+          if-no-files-found: error
+          retention-days: 7
