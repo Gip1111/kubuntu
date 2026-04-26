@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - ".github/workflows/build-iso.yml"
-      - "source.tar.gz.b64"
+      - "source.tar.gz"
 
 jobs:
   build:
@@ -22,9 +22,7 @@ jobs:
       - name: Unpack source bundle
         run: |
           set -euxo pipefail
-          base64 -d source.tar.gz.b64 > source.tar.gz
           tar -xzf source.tar.gz
-          rm -f source.tar.gz
 
       - name: Free disk space
         run: |
